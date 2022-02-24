@@ -1,0 +1,972 @@
+<!doctype html>
+<html>
+	<head>
+		<meta charset="utf-8">
+		<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+
+		<title>Catallaxy Services | Locking Down Azure Synapse Analytics</title>
+
+		<link rel="stylesheet" href="../reveal.js/dist/reset.css">
+		<link rel="stylesheet" href="../reveal.js/dist/reveal.css">
+		<link rel="stylesheet" href="../reveal.js/dist/theme/black.css" id="theme">
+		<link rel="stylesheet" href="../WebsiteAssets/mods.css">
+
+		<!-- Theme used for syntax highlighted code -->
+		<link rel="stylesheet" href="../reveal.js/plugin/highlight/monokai.css" id="highlight-theme">
+	</head>
+	<body>
+		<div class="reveal">
+			<div class="slides">
+				<section data-background-image="presentation/assets/image/Bubbles.jpg" data-background-opacity="0.4">
+					<h2>Locking Down Azure Synapse Analytics</h2>
+					
+					<a href="https://www.catallaxyservices.com">Kevin Feasel</a> (<a href="https://twitter.com/feaselkl">@feaselkl</a>)<br />
+					<a href="https://csmore.info/on/lockdown">https://csmore.info/on/lockdown</a>
+				</section>
+				
+				<section data-background-image="presentation/assets/image/Bubbles.jpg" data-background-opacity="0.4">
+					<h3>Who Am I?  What Am I Doing Here?</h3>
+					<div class="container">
+						<div class="col">
+							<table class="whoami">
+								<tr>
+									<td><a href="https://csmore.info"><img src="../WebsiteAssets/Logo.png" height="100" /></a></td>
+									<td nowrap><a href="https://csmore.info">Catallaxy Services</a></td>
+								</tr>
+								<tr>
+									<td><a href="https://curatedsql.com"><img src="../WebsiteAssets/CuratedSQLLogo.png" height="100" /></a></td>
+									<td nowrap><a href="https://curatedsql.com">Curated SQL</a></td>
+								</tr>
+								<tr>
+									<td><a href="https://csmore.info/on/training"><img src="../WebsiteAssets/Teachable.png" height="120" /></a></td>
+									<td nowrap><a href="https://csmore.info/on/training">Training on Teachable</a></td>
+								</tr>
+							</table>
+						</div>
+						<div class="col">
+							<a href="http://www.twitter.com/feaselkl"><img src="../WebsiteAssets/HeadShot.jpg" height="358" width="315" /></a>
+							<br />
+							<a href="http://www.twitter.com/feaselkl">@feaselkl</a>
+						</div>					
+					</div>
+				</section>
+				
+				<section data-background-image="presentation/assets/background/motivation.jpg" data-background-opacity="0.2">
+					<h3>Motivation</h3>
+					
+					<ul>
+						<li>Provide a <strong>high-level</strong> overview of Azure Synapse Analytics security, including:
+							<ul>
+								<li>Network security options</li>
+								<li>Workspace security</li>
+								<li>Connecting to outside resources</li>
+								<li>Securing three major pools:  dedicated SQL pool, serverless SQL pool, Spark pool</li>
+							</ul>
+						</li>
+						<li>Provide notes on additional tooling.</li>
+					</ul>
+				</section>
+
+				<section data-background-image="presentation/assets/image/Bubbles.jpg" data-background-opacity="0.4">
+					<h3>Agenda</h3>
+					
+					<ol>
+						<li class="active">What is Azure Synapse Analytics?</li>
+						<li>Before You Begin...</li>
+						<li>Setup Options</li>
+						<li>Workspace Security</li>
+						<li>Linked Services</li>
+						<li>Pool Security</li>
+						<li>Additional Tools</li>
+					</ol>
+				</section>
+				
+				<section data-background-image="presentation/assets/background/warehouse.jpg" data-background-opacity="0.2">
+					<h3>Azure Synapse Analytics</h3>
+					
+					<p>Azure Synapse Analytics is Microsoft's platform for modern data warehousing.  It is made up of four data sources:</p>
+					
+					<div class="container">
+						<div class="col">
+							<ul>
+								<li>Dedicated SQL pools</li>
+								<li>Spark pools</li>
+								<li>Serverless SQL pool</li>
+								<li>Data explorer pools (preview)</li>
+							</ul>
+						</div>
+						<div class="col">
+							<img src="presentation/assets/image/pools.png"  />
+						</div>					
+					</div>
+				</section>
+				
+				<section data-background-image="presentation/assets/background/blueprints.jpg" data-background-opacity="0.2">
+					<h3>Dedicated SQL pools</h3>
+					
+					<p>Azure Synapse Analytics dedicated SQL pools, nee Azure SQL Data Warehouse, offer up a Massive Parallel Processing approach to data warehousing and work best in classic data warehousing scenarios:</p>
+
+					<ul>
+						<li>You are using the Kimball model of facts and dimensions.</li>
+						<li>Your total data size is at least 1 TB.</li>
+						<li>Your major fact tables have at least 1 billion rows of date and numeric data.</li>
+						<li>Your major dimension tables are relatively small but wide.</li>
+						<li>Users typically work off of a set number of queries.</li>
+					</ul>
+				</section>
+				
+				<section data-background-image="presentation/assets/background/sparkler.jpg" data-background-opacity="0.2">
+					<h3>Spark pools</h3>
+					
+					<p>Azure Synapse Analytics Spark pools allow you to spin up Apache Spark clusters.  Key use cases for these Spark clusters include:</p>
+
+					<ul>
+						<li>Complicated data transformation projects, such as working with regular expressions.</li>
+						<li>Distributed machine learning tasks not suited for Azure Machine Learning.</li>
+						<li>Migrating work from on-premises Apache spark clusters or HDInsight clusters.</li>
+					</ul>
+				</section>
+				
+				<section data-background-image="presentation/assets/background/muay-thai.jpg" data-background-opacity="0.2">
+					<h3>Serverless vs Dedicated SQL pools</h3>
+					
+					<p>Azure Synapse Analytics serverless SQL pools are a bit different from dedicated SQL pools in the following ways:</p>
+
+					<ul>
+						<li>Serverless SQL pools do <strong>not</strong> store data.  They read files directly from your data lake and expose them as SQL tables.</li>
+						<li>Serverless SQL pools require no infrastructure or resource reservation and have no up-front costs.</li>
+						<li>The pricing model for serverless SQL pools is based on data utilization:  approximately $5 per terabyte of data processed.</li>
+					</ul>
+				</section>
+				
+				<section data-background-image="presentation/assets/background/logs.jpg" data-background-opacity="0.2">
+					<h3>Data Explorer pools</h3>
+					
+					<p>Data Explorer pools allow you to perform real-time analysis on large volumes of data.  The initial use case of this was to process log data, but using the Kusto Query Language (KQL), we can also perform detailed time series analysis, whether real-time or off of already-stored data.</p>
+					
+					<p>NOTE:  because Data Explorer pools are still in public preview, we won't get into the security aspects of them yet, as guidance is not yet solidified.</p>
+				</section>
+				
+				<section data-background-image="presentation/assets/background/checklist.jpg" data-background-opacity="0.2">
+					<h3>Brief Pool Advice</h3>
+					
+					<ul>
+						<li>Must have one and only one severless SQL pool.</li>
+						<li>One Spark pool per relevant task.</li>
+						<li>Create and destroy Spark pools as needed.  Typically have zero or several, not just one.</li>
+						<li>One dedicated SQL pool per warehouse.  Typically only need one.</li>
+						<li>Pause dedicated SQL pools when not in use to save money.</li>
+					</ul>
+				</section>
+				
+				<section data-background-image="presentation/assets/background/pipes2.jpg" data-background-opacity="0.2">
+					<h3>Synapse Pipelines</h3>
+					
+					<p>Synapse Pipelines are based on Azure Data Factory pipelines, making it easy to perform Extract-Load-Transform (ELT) operations.</p>
+				</section>
+				
+				<section data-background-image="presentation/assets/background/connections.jpg" data-background-opacity="0.2">
+					<h3>Synapse Link</h3>
+					
+					<p>Synapse Link allows us to connect data sources like Cosmos DB, Dataverse, and SQL Server 2022 to Azure Synapse Analytics, making it easier to move data without needing to build ETL or ELT jobs.</p>
+				</section>
+				
+				<section data-background-image="presentation/assets/image/Bubbles.jpg" data-background-opacity="0.4">
+					<h3>Agenda</h3>
+					
+					<ol>
+						<li>What is Azure Synapse Analytics?</li>
+						<li class="active">Before You Begin...</li>
+						<li>Workspace Security</li>
+						<li>Linked Services</li>
+						<li>Pool Security</li>
+						<li>Additional Tools</li>
+					</ol>
+				</section>
+				
+				<section data-background-image="presentation/assets/background/rulers.jpg" data-background-opacity="0.2">
+					<h3>Regulatory Compliance</h3>
+					
+					<p>Organizations may be tied to a variety of regulatory regimes.  Review <a href="https://docs.microsoft.com/en-us/compliance/regulatory/offering-home">Microsoft compliance offerings</a> to see more detail.</p>
+				</section>
+				
+				<section data-background-image="presentation/assets/background/businessdecision.jpg" data-background-opacity="0.2">
+					<h3>Shared Responsibility</h3>
+					
+					<p>Microsoft has details on compliance but this is a team effort.</p>
+					
+					<ul>
+						<li><strong>Microsoft</strong> controls the hardware and <strong>you</strong> control the access.</li>
+						<li><strong>Microsoft</strong> offers encryption and <strong>you</strong> control encryption.</li>
+						<li><strong>Microsoft</strong> controls the network and <strong>you</strong> control the data.</li>
+					</ul>
+				</section>
+				
+				<section data-background-image="presentation/assets/background/records.jpg" data-background-opacity="0.2">
+					<h3>Data Collection Principles</h3>
+					
+					<p>One key element of regulatory compliance is that we follow certain data collection principles.</p>
+					
+					<ul>
+						<li>Encrypt data at rest</li>
+						<li>Encrypt data in transit</li>
+						<li>Ensure sensitive data is necessary to store</li>
+						<li>Remove obsolete data</li>
+						<li>Grant access on an as-needed basis</li>
+					</ul>
+				</section>
+				
+				<section data-background-image="presentation/assets/background/auto-traffic.jpg" data-background-opacity="0.2">
+					<h3>Business Continuity - HA/DR</h3>
+					
+					<p>Microsoft controls most of High Availability.</p>
+					
+					<ul>
+						<li>Dedicated SQL pools are distributed and highly available by default.</li>
+						<li>The Serverless SQL pool is highly available, though the service can fail.</li>
+						<li>Spark pools have "user-controllable" high availability:  spin up a new pool.</li>
+					</ul>
+				</section>
+				
+				<section data-background-image="presentation/assets/background/caution.jpg" data-background-opacity="0.2">
+					<h3>Business Continuity - HA/DR</h3>
+					
+					<p>Disaster Recovery is a joint effort.</p>
+					
+					<ul>
+						<li>Dedicated SQL pools take automated snapshots with RPO 8 hours and retention 7 days.  You may also take manual snapshots.</li>
+						<li>Dedicated SQL pools are automatically backed up to another region once every 24 hours.</li>
+						<li>Other pools store data in a data lake.  Geo-Redundant Storage makes Azure Data Lake Gen2 disaster recoverable.</li>
+					</ul>
+				</section>
+				
+				<section data-background-image="presentation/assets/image/Bubbles.jpg" data-background-opacity="0.4">
+					<h3>Agenda</h3>
+					
+					<ol>
+						<li>What is Azure Synapse Analytics?</li>
+						<li>Before You Begin...</li>
+						<li class="active">Setup Options</li>
+						<li>Workspace Security</li>
+						<li>Linked Services</li>
+						<li>Pool Security</li>
+						<li>Additional Tools</li>
+					</ol>
+				</section>
+				
+				<section data-background-image="presentation/assets/image/Bubbles.jpg" data-background-opacity="0.4">
+					<h3>Network Security Options</h3>
+					
+					<p>There are two major options around network security:  managed virtual networks and data exfiltration protection.</p>
+					
+					<img src="presentation/assets/image/SynapseManagedVNet.png" height="450"  />
+				</section>
+				
+				<section data-background-image="presentation/assets/background/server-rack.jpg" data-background-opacity="0.2">
+					<h3>Managed Virtual Network</h3>
+					
+					<p>Microsoft creates a virtual network and controls it for you.</p>
+					
+					<p>You <strong>must</strong> enable this at creation time if you wish to have a managed virtual network.  You cannot enable this on an existing workspace or disable it later.</p>
+					
+					<p><strong>NOTE:</strong>  there is no option for you to create your own virtual network and manage it yourself.  Either you use Microsoft's managed VNet or you have no VNet for Synapse.</p>
+				</section>
+				
+				<section data-background-image="presentation/assets/background/plan.jpg" data-background-opacity="0.2">
+					<h3>What the Managed Virtual Network Does</h3>
+					
+					<ul>
+						<li>Segregates Spark pools into individual subnets.  This provides cross-pool protection.</li>
+						<li>Isolates the Synapse workspace into its own virtual network.</li>
+						<li>Opens up only the ports necessary for communication with Synapse services and no more.</li>
+						<li>Enables managed private endpoints:  connection points to Azure resources which do not transit the public Internet.</li>
+						<li>Creates managed private endpoints to the serverless SQL pool and any dedicated SQL pools you create.</li>
+						<li>Allows you to enable data exfiltration protection (DEP).</li>
+					</ul>
+				</section>
+				
+				<section data-background-image="presentation/assets/background/Variety.jpg" data-background-opacity="0.2">
+					<h3>Data Exfiltration Protection</h3>
+					
+					<p>Data exfiltration protecton "allows outbound data traffic only to approved targets."</p>
+					
+					<p>Short version of my opinion:  it works well but can be quite limiting to developers.</p>
+					
+					<p>You <strong>must</strong> enable this at creation time if you wish to enable DEP.  You cannot enable this on an existing workspace or disable it later.</p>
+				</section>
+				
+				<section data-background-image="presentation/assets/background/ugh.jpg" data-background-opacity="0.2">
+					<h3>What Data Exfiltration Protection Does</h3>
+					
+					<ul>
+						<li>Severely limits external resources your workspace can reach:  (mostly) just managed private endpoints.</li>
+						<li>Allows you to limit Azure AD tenants to which you can write data.</li>
+						<li>Prevents pools from hitting the public internet.</li>
+					</ul>
+				</section>
+				
+				<section data-background-image="presentation/assets/image/Bubbles.jpg" data-background-opacity="0.4">
+					<h3>Network Options You Control</h3>
+					
+					<div class="container">
+						<div class="col">
+							<ul>
+								<li>(Managed VNet only) If you wish to disable public network access</li>
+								<li>IP address ranges which can access Synapse resources</li>
+								<li>If all Azure resources get access to this workspace</li>
+							</ul>
+						</div>
+						<div class="col">
+							<img src="presentation/assets/image/PublicNetworkAccess.png"  />
+						</div>					
+					</div>
+				</section>
+				
+				<section data-background-image="presentation/assets/image/Bubbles.jpg" data-background-opacity="0.4">
+					<h3>Agenda</h3>
+					
+					<ol>
+						<li>What is Azure Synapse Analytics?</li>
+						<li>Before You Begin...</li>
+						<li>Setup Options</li>
+						<li class="active">Workspace Security</li>
+						<li>Linked Services</li>
+						<li>Pool Security</li>
+						<li>Additional Tools</li>
+					</ol>
+				</section>
+				
+				<section data-background-image="presentation/assets/image/Bubbles.jpg" data-background-opacity="0.4">
+					<h3>I'm Contributing!</h3>
+					
+					<p>You will want to grant most users Storage Blob Data Contributor against the storage account in Azure.</p>
+					
+					<img src="presentation/assets/image/StorageDataBlobContributor.png" height="450" />
+				</section>
+				
+				<section data-background-image="presentation/assets/background/stack.jpg" data-background-opacity="0.2">
+					<h3>Synapse RBAC Roles</h3>
+					
+					<p>Azure Synapse Analytics has several RBAC roles.  These are "workspace" level roles and control what actions users may take within Synapse.  In addition to these, there are different RBAC roles for the dedicated and serverless SQL pools.</p>
+				</section>
+				
+				<section data-background-image="presentation/assets/image/Bubbles.jpg" data-background-opacity="0.4">
+					<h3>Synapse Administrator</h3>
+					
+					<ul>
+						<li>Full access to everything inside Synapse.</li>
+						<li>Along with Azure Owners, can assign RBAC roles to others.</li>
+						<li>Still need Azure permissions (Owner or Contributor of the workspace) for compute resource management.</li>
+					</ul>
+				</section>
+				
+				<section data-background-image="presentation/assets/image/Bubbles.jpg" data-background-opacity="0.4">
+					<h3>Spark Administrator</h3>
+					
+					<ul>
+						<li>Create and manage Spark pools.</li>
+						<li>Can work with Spark notebooks and job definitions.</li>
+						<li>Can NOT run Synapse Pipelines or grant access to others.</li>
+					</ul>
+				</section>
+				
+				<section data-background-image="presentation/assets/image/Bubbles.jpg" data-background-opacity="0.4">
+					<h3>SQL Administrator</h3>
+					
+					<ul>
+						<li>Full access to the serverless SQL pool.</li>
+						<li>Can manage dedicated SQL pools, including creating logins and granting access inside the SQL pools.</li>
+						<li>Can manage scripts, credentials, and linked services.</li>
+						<li>Can NOT run Synapse Pipelines or grant Synapse access to others.</li>
+					</ul>
+				</section>
+				
+				<section data-background-image="presentation/assets/image/Bubbles.jpg" data-background-opacity="0.4">
+					<h3>Artifact Publisher</h3>
+					
+					<ul>
+						<li>Can read and manage published code artifacts, as well as their outputs.</li>
+						<li>Does not include permissions to <strong>run</strong> code or pipelines, or to grant access to others.</li>
+						<li>Artifact User also exists and provides read-only access but no management options.</li>
+					</ul>
+				</section>
+				
+				<section data-background-image="presentation/assets/image/Bubbles.jpg" data-background-opacity="0.4">
+					<h3>Credential User</h3>
+					
+					<ul>
+						<li>Use secrets within credentials and linked services.</li>
+						<li>Required for activities like pipeline runs.</li>
+					</ul>
+				</section>
+				
+				<section data-background-image="presentation/assets/image/Bubbles.jpg" data-background-opacity="0.4">
+					<h3>Compute Operator</h3>
+					
+					<ul>
+						<li>Can submit Spark jobs/notebooks and view logs.</li>
+						<li>May cancel Spark jobs from any user.</li>
+						<li>May run pipelines and view pipeline runs/outputs if given Credential User access.</li>
+					</ul>
+				</section>
+				
+				<section data-background-image="presentation/assets/image/Bubbles.jpg" data-background-opacity="0.4">
+					<h3>Synapse Contributor</h3>
+					
+					<ul>
+						<li>Includes all Compute Operator permissions.</li>
+						<li>Full access to Spark pools and Integration Runtimes.</li>
+						<li>May work with published code artifacts.</li>
+						<li>Requires Credential User to run pipelines.</li>
+					</ul>
+				</section>
+				
+				<section data-background-image="presentation/assets/image/Bubbles.jpg" data-background-opacity="0.4">
+					<h3>Synapse User</h3>
+					
+					<ul>
+						<li>List and view details on SQL pools, Spark pools, Integration Runtimes, and published linked services + credentials.</li>
+						<li>May not review published code artifacts.</li>
+						<li>May create new artifacts but requires other permissions to run or publish them.</li>
+					</ul>
+				</section>
+				
+				<section data-background-image="presentation/assets/background/engineering.jpg" data-background-opacity="0.2">
+					<h3>Encrypting Data in Transit</h3>
+					
+					<p>All traffic to workspace endpoints, whether you are using a Managed Virtual Network or not, is encrypted using TLS 1.2.  There is nothing you need to do to enable this.</p>
+				</section>
+				
+				<section data-background-image="presentation/assets/image/Bubbles.jpg" data-background-opacity="0.4">
+					<h3>Agenda</h3>
+					
+					<ol>
+						<li>What is Azure Synapse Analytics?</li>
+						<li>Before You Begin...</li>
+						<li>Setup Options</li>
+						<li>Workspace Security</li>
+						<li class="active">Linked Services</li>
+						<li>Pool Security</li>
+						<li>Additional Tools</li>
+					</ol>
+				</section>
+				
+				<section data-background-image="presentation/assets/image/Bubbles.jpg" data-background-opacity="0.4">
+					<h3>Linked Services</h3>
+					
+					<div class="container">
+						<div class="col">
+							<ul>
+								<li>Make connections to external resources</li>
+								<li>Can include on-prem resources or services in other clouds</li>
+								<li>For Azure services, can connect via Managed Identity</li>
+								<li>Store keys and connection strings in Key Vault</li>
+							</ul>
+						</div>
+						<div class="col">
+							<img src="presentation/assets/image/LinkedServices.png"  />
+						</div>					
+					</div>
+				</section>
+				
+				<section data-background-image="presentation/assets/image/Bubbles.jpg" data-background-opacity="0.4">
+					<h3>Private Endpoints</h3>
+					
+					<div class="container">
+						<div class="col">
+							<ul>
+								<li>Requires Managed Virtual Network</li>
+								<li>Most secure way of connecting to other Azure resources</li>
+								<li>Works with a limited number of Azure resources</li>
+								<li>Use these whenever possible!</li>
+							</ul>
+						</div>
+						<div class="col">
+							<img src="presentation/assets/image/PrivateEndpoints.png"  />
+						</div>					
+					</div>
+				</section>
+				
+				<section data-background-image="presentation/assets/image/Bubbles.jpg" data-background-opacity="0.4">
+					<h3>Agenda</h3>
+					
+					<ol>
+						<li>What is Azure Synapse Analytics?</li>
+						<li>Before You Begin...</li>
+						<li>Setup Options</li>
+						<li>Workspace Security</li>
+						<li>Linked Services</li>
+						<li class="active">Pool Security</li>
+						<li>Additional Tools</li>
+					</ol>
+				</section>
+				
+				<section data-background-image="presentation/assets/image/Bubbles.jpg" data-background-opacity="0.4">
+					<h3>Dedicated SQL Pool</h3>
+				</section>
+				
+				<section data-background-image="presentation/assets/background/devices.jpg" data-background-opacity="0.2">
+					<h3>Role-Based Access Controls</h3>
+					
+					<p>If you're familiar with SQL Server, you should already know about dedicated SQL pool role-based access controls:</p>
+					
+					<ul>
+						<li>Logins (Azure AD or SQL authentication)</li>
+						<li>Users</li>
+						<li>Built-In Database Roles</li>
+						<li>Custom Database Roles</li>
+					</ul>
+				</section>
+				
+				<section data-background-image="presentation/assets/background/greenscreen.jpg" data-background-opacity="0.2">
+					<h3>Permissions</h3>
+					
+					<p>You can control access to objects (tables, views, procedures, etc.) for various roles using three permissions:</p>
+					
+					<ul>
+						<li>GRANT</li>
+						<li>REVOKE</li>
+						<li>DENY</li>
+					</ul>
+				</section>
+				
+				<section data-background-image="presentation/assets/background/blocks.jpg" data-background-opacity="0.2">
+					<h3>Notes on Permissions</h3>
+					
+					<p>You can control access to objects (tables, views, procedures, etc.) for various roles using three permissions:</p>
+					
+					<ul>
+						<li>Permissions are inherited.  If a user is in a role, the user gets all of the grants and denials from the role.</li>
+						<li><code>REVOKE</code> resets a <code>GRANT</code> or <code>DENY</code>.</li>
+						<li><code>DENY</code> supercedes <code>GRANT</code>, irrespective of how "far" the denial was in the inheritence chain.  Even if we explicitly grant on the user.</li>
+					</ul>
+				</section>
+				
+				<section data-background-image="presentation/assets/background/blocks.jpg" data-background-opacity="0.2">
+					<h3>Permissions Example</h3>
+					
+					<ul>
+						<li><code>Suzanne</code> is a user in the <code>Developers</code> Azure AD group.</li>
+						<li class="fragment"><code>Developers</code> has <code>db_datareader</code> on the user database.</li>
+						<li class="fragment"><code>Developers</code> has <code>DENY SELECT</code> on <code>dbo.Finances</code>.</li>
+						<li class="fragment"><code>Suzanne</code> can <strong>NOT</strong> access <code>dbo.Finances</code>.</li>
+						<li class="fragment">If we <code>GRANT</code> <code>SELECT</code> for <code>Suzanne</code>, she <strong>still cannot</strong> access the table!  <code>DENY</code> overrides <code>GRANT</code>, regardless of level.</li>
+					</ul>
+				</section>
+				
+				<section data-background-image="presentation/assets/background/sketch.jpg" data-background-opacity="0.2">
+					<h3>Database Roles</h3>
+					
+					<p>User database roles are basically the same as SQL Server.  There are three interesting master database roles:</p>
+					
+					<ul>
+						<li>dbmanager -- Can create and drop databases</li>
+						<li>db_exporter -- Can create tables, alter schemas, and work with PolyBase</li>
+						<li>loginmanager -- Can create and delete logins in master</li>
+					</ul>
+				</section>
+				
+				<section data-background-image="presentation/assets/background/server-room.jpg" data-background-opacity="0.2">
+					<h3>Encrypting Data at Rest</h3>
+					
+					<p>Dedicated SQL pools are always encrypted at rest using Microsoft keys.</p>
+					
+					<p>In addition, you may double-encrypt your workspace using a customer-managed key.  This will cause dedicated SQL pool data to be double-encrypted.</p>
+					
+					<p>If you do not double-encrypt your workspace, you may turn on Transparent Data Encryption for dedicated SQL pools.</p>
+					
+					<p>All snapshots (backups) are written to encrypted disks.</p>
+				</section>
+				
+				<section data-background-image="presentation/assets/background/dictionary.jpg" data-background-opacity="0.2">
+					<h3>Column-Level Encryption</h3>
+					
+					<p>Dedicated SQL pools allow you to perform column-level encryption using the <code>EncryptByKey()</code> and <code>DecryptByKey</code> functions.</p>
+					
+					<p>If you choose to use column-level encryption, use <code>AES_256</code> for the symmetric key.  Azure Synapse Analytics also supports <code>AES_128</code> and <code>AES_192</code> but none of the older, insecure options like DES or RC4.</p>
+					
+					<p>Always Encrypted is <strong>not</strong> supported.</p>
+				</section>
+				
+				<section data-background-image="presentation/assets/image/Bubbles.jpg" data-background-opacity="0.4">
+					<pre><code data-line-numbers="|1-3|5-7|9-10|12-15|17-23" data-trim><script type="text/template">
+					CREATE MASTER KEY;
+					GO
+					CREATE CERTIFICATE PersonnelCert WITH SUBJECT = 'Some Certificate';
+					GO
+					CREATE SYMMETRIC KEY PersonnelKey
+						WITH ALGORITHM = AES_256
+						ENCRYPTION BY CERTIFICATE PersonnelCert;
+					GO
+					ALTER TABLE dbo.People
+						ADD nameLastEncrypted VARBINARY(160);
+					GO
+					OPEN SYMMETRIC KEY PersonnelKey
+						DECRYPTION BY CERTIFICATE PersonnelCert;
+					UPDATE dbo.People
+					SET nameLastEncrypted = CAST(EncryptByKey(Key_GUID('PersonnelKey'), nameLast) AS VARBINARY(160));
+					GO
+					OPEN SYMMETRIC KEY PersonnelKey
+						DECRYPTION BY CERTIFICATE PersonnelCert;
+					SELECT
+						nameLast,
+						nameLastEncrypted,
+						CONVERT(NVARCHAR, DecryptByKey(nameLastEncrypted)) AS nameLastDecrypted
+					FROM dbo.People;
+					GO
+					</script></code></pre>
+				</section>
+				
+				<section data-background-image="presentation/assets/background/eye.jpg" data-background-opacity="0.2">
+					<h3>Dynamic Data Masking</h3>
+					
+					<p>Dynamic data masking is <strong>NOT</strong> an alternative to encryption!</p>
+					
+					<p>It replaces results in a <code>SELECT</code> operation with a mask, blocking out sensitive fields like identifiers or e-mail addresses.</p>
+					
+					<p>People with the ability to query tables can still use the <code>WHERE</code> clause to filter on values and clever users can tease out the actual values.</p>
+				</section>
+				
+				<section data-background-image="presentation/assets/background/folders.jpg" data-background-opacity="0.2">
+					<h3>Row-Level Security</h3>
+					
+					<p>Row-level security allows you to use group membership or execution context to control which users appear--these are "filter predicates."</p>
+					
+					<p>Assuming you have a column in the table you can use to filter, create a function which returns 1 if the current user can see the row.  Create a security policy to tie your single column to that function.</p>
+					
+					<p>This <strong>WILL</strong> have a performance impact!</p>
+				</section>
+				
+				<section data-background-image="presentation/assets/image/Bubbles.jpg" data-background-opacity="0.4">
+					<pre><code data-line-numbers="|1-3|6-12|14-22|24-28|30-31|33-39" data-trim><script type="text/template">
+					-- Run this part in master!
+					-- Create a team-specific login
+					CREATE LOGIN ATLUser WITH PASSWORD = 'AtlantaBraves!'
+					GO
+
+					-- Run the rest of this in your user database!
+					CREATE USER ATLUser FROM LOGIN ATLUser
+					GO
+					-- Grant ATLUser and Alicia read-only rights on the Pitching table.
+					GRANT SELECT ON dbo.Pitching TO ATLUser, [alicia@feaselklgmail.onmicrosoft.com];
+					GO
+					CREATE SCHEMA Security;  
+					GO
+					-- Create a function to determine if the current user should see the current row
+					-- based on this input value.
+					CREATE FUNCTION Security.TeamPredicate(@teamID AS nvarchar(3))
+						RETURNS TABLE  
+					WITH SCHEMABINDING  
+					AS  
+						RETURN SELECT 1 AS Success
+						WHERE @teamID = LEFT(USER_NAME(), 3)
+							OR (USER_NAME() = 'alicia@feaselklgmail.onmicrosoft.com' AND @teamID IN (N'TOR', N'SEA', N'KCA'));
+					GO
+					-- Create a security policy to tie our function to a given table.
+					CREATE SECURITY POLICY TeamPolicy
+					ADD FILTER PREDICATE Security.TeamPredicate(teamID)
+					ON dbo.Pitching
+					WITH (STATE = ON);
+					GO
+					-- Alicia and ATLUser both need to be able to execute the TeamPredicate function.
+					GRANT SELECT ON Security.TeamPredicate TO ATLUser, [alicia@feaselklgmail.onmicrosoft.com];
+					GO
+
+					EXECUTE AS USER = 'ATLUser'
+					SELECT * FROM dbo.Pitching WHERE yearID = 1995;
+					REVERT
+
+					EXECUTE AS USER = 'alicia@feaselklgmail.onmicrosoft.com'
+					SELECT * FROM dbo.Pitching WHERE yearID = 1995;
+					REVERT
+					</script></code></pre>
+				</section>
+				
+				<section data-background-image="presentation/assets/background/magnifying-glass.jpg" data-background-opacity="0.2">
+					<h3>Data Discovery and Classification</h3>
+					
+					<p>Data Discovery and Classification allows you to classify specific columns in tables with various sensitivity levels.</p>
+					
+					<img src="presentation/assets/image/Classification.png"  />
+				</section>
+				
+				<section data-background-image="presentation/assets/background/magnifying-glass.jpg" data-background-opacity="0.2">
+					<h3>Data Discovery and Classification</h3>
+					
+					<p>We may then audit queries on classified data.</p>
+					
+					<img src="presentation/assets/image/ClassificationAudit.png"  />
+				</section>
+				
+				<section data-background-image="presentation/assets/image/Bubbles.jpg" data-background-opacity="0.4">
+					<h3>Serverless SQL Pool</h3>
+				</section>
+				
+				<section data-background-image="presentation/assets/background/devices.jpg" data-background-opacity="0.2">
+					<h3>Role-Based Access Controls</h3>
+					
+					<p>Database objects follow the same basic security rules as with dedicated SQL pools:</p>
+					
+					<ul>
+						<li>Logins and users</li>
+						<li>GRANT, DENY, REVOKE permissions</li>
+						<li>Role assignment, including custom roles</li>
+					</ul>
+				</section>
+				
+				<section data-background-image="presentation/assets/background/cat-yawning.jpg" data-background-opacity="0.2">
+					<h3>Less to Do</h3>
+					
+					<p>The serverless SQL pool is (mostly) read-only, so we cannot insert, update, delete, merge, truncate, or otherwise modify data.</p>
+					
+					<p>We cannot create (normal) tables in the serverless SQL pool.  Either we access data via <code>OPENROWSET</code> or create external tables with PolyBase.</p>
+				</section>
+				
+				<section data-background-image="presentation/assets/background/annotation.jpg" data-background-opacity="0.2">
+					<h3>OPENROWSET</h3>
+					
+					<p>The <code>OPENROWSET</code> command requires (at least) the Synapse User RBAC role as well as <code>GRANT ADMINISTER DATABASE BULK OPERATIONS</code> in the serverless SQL pool.</p>
+					
+					<p>This sounds like a scary role but it's not, at lesat in the serverless SQL pool.  We can't bulk insert data, so it's really just for <code>OPENROWSET</code> queries.</p>
+				</section>
+				
+				<section data-background-image="presentation/assets/background/globe.jpg" data-background-opacity="0.2">
+					<h3>PolyBase</h3>
+					
+					<p>PolyBase requires (at least) the Synapse User RBAC role.</p>
+
+					<p>To create or drop external tables, we need <code>CONTROL</code> permission on the serverless SQL pool.  That's powerful.</p>
+					
+					<p>To read from exteranl tables, we need <code>db_datareader</code>/<code>db_owner</code> or be granted explicit <code>SELECT</code> access to the table.</p>
+				</section>
+				
+				<section data-background-image="presentation/assets/image/Bubbles.jpg" data-background-opacity="0.4">
+					<h3>Recommendation:  MSI</h3>
+					
+					<p>The serverless pool reads data from your data lake.  Use the Managed Service Identity to access the lake.</p>
+
+					<pre><code data-trim><script type="text/template">
+					CREATE DATABASE SCOPED CREDENTIAL [SynapseMSI]
+						WITH IDENTITY = 'Managed Service Identity';
+					CREATE EXTERNAL DATA SOURCE [DataLake] WITH
+					(
+						LOCATION = N'abfss://synapse@mydatalakestorage.dfs.core.windows.net/',
+						CREDENTIAL = [SynapseMSI]
+					);
+					</script></code></pre>
+				</section>
+				
+				<section data-background-image="presentation/assets/background/map.jpg" data-background-opacity="0.2">
+					<h3>Fallback:  SAS Tokens</h3>
+					
+					<p>If you need to access external storage accounts, one option is to use Shared Access Signature (SAS) tokens.</p>
+					
+					<p>SAS tokens grant limited access to specific storage account resources, including filtering down to specific containers/folders/files and granting specific permissions (e.g., List, Read, Write Delete).  You can grant access for a limited timeframe, limit allowed IP addresses, and require HTTPS using SAS tokens.</p>
+				</section>
+				
+				<section data-background-image="presentation/assets/image/Bubbles.jpg" data-background-opacity="0.4">
+					<h3>Fallback:  SAS Tokens</h3>
+
+					<pre><code data-trim><script type="text/template">
+					# Create one which will last for 30 minutes
+					# Permissions:  delete list read write
+					$env:AZURE_STORAGE_KEY = "<Your storage key>"
+					$end = date -u -d "30 minutes" '+%Y-%m-%dT%H:%MZ'
+					$sas = az storage container generate-sas
+						--name synapse
+						--https-only
+						--permissions dlrw
+						--expiry $end
+						-o tsv
+						--account-name mystorageaccountname
+					</script></code></pre>
+				</section>
+				
+				<section data-background-image="presentation/assets/image/Bubbles.jpg" data-background-opacity="0.4">
+					<h3>Spark Pool</h3>
+				</section>
+				
+				<section data-background-image="presentation/assets/background/tomatoes.jpg" data-background-opacity="0.2">
+					<h3>Spark Pool Isolation</h3>
+					
+					<p>Spark pools offer two types of isolation:</p>
+					
+					<ul>
+						<li>Network isolation -- each Spark pool is on its own virtual network</li>
+						<li>Physical isolation -- <strong>IF</strong> you use the XXXLarge node size in specific regions, you may get physical isolation of compute--nobody else uses "your" server.</li>
+					</ul>
+				</section>
+				
+				<section data-background-image="presentation/assets/image/Bubbles.jpg" data-background-opacity="0.4">
+					<h3>Creating a Spark Pool</h3>
+					
+					<p>To create a Spark pool, we need one of the following roles:</p>
+					
+					<ul>
+						<li>Synapse Administrator</li>
+						<li>Synapse Spark Administrator</li>
+					</ul>
+				</section>
+				
+				<section data-background-image="presentation/assets/background/notebook.jpg" data-background-opacity="0.2">
+					<h3>Running a Spark Notebook</h3>
+					
+					<p>To run a Spark notebook, we need one of the following roles:</p>
+					
+					<ul>
+						<li>Synapse Administrator</li>
+						<li>Synapse Contributor</li>
+						<li>Synapse Compute Operator</li>
+					</ul>
+					
+					<p>If we want to use the data lake, we should also have the Storage Blob Data Contributor Azure role on the storage account.</p>
+				</section>
+				
+				<section data-background-image="presentation/assets/background/lake.jpg" data-background-opacity="0.2">
+					<h3>Lake Databases</h3>
+					
+					<p>Lake Databases share metadata between the serverless SQL pool and Spark pools.  Lake databases are hosted on top of the data lake.</p>
+					
+					<p>We secure lake databases at the storage level:  to grant rights, give read on files and execute on folders.</p>
+					
+					<p>The database creator is the owner and has all rights.  In addition, accounts with the Synapse Administrator or Synapse <strong>SQL</strong> Administrator will have all permissions as well.</p>
+				</section>
+				
+				<section data-background-image="presentation/assets/background/library.jpg" data-background-opacity="0.2">
+					<h3>Spark Libraries</h3>
+					
+					<p>Spark pools come with a variety of pre-loaded libraries but you can also install Scala/Java and Python libraries after the fact.</p>
+					
+					<p>Synapse does not support Maven or other Java package managers so we will need to install workspace packages as JAR files from the Manage menu in the Synapse workspace.</p>
+				</section>
+				
+				<section data-background-image="presentation/assets/background/library2.jpg" data-background-opacity="0.2">
+					<h3>Spark Libraries</h3>
+					
+					<p>Synapse installs Python packages via Pip and allows you to specify a Requirements.txt file.  We can also import custom WHL files from the Manage menu in the Synapse workspace.</p>
+					
+					<p>To import libraries, we will need Storage Data Blob Contributor on the data lake but no additional permissions.</p>
+				</section>
+				
+				<section data-background-image="presentation/assets/background/open-books.jpg" data-background-opacity="0.2">
+					<h3>Mitigating Library Risks</h3>
+					
+					<p>Custom package installation can introduce vulnerable packages.</p>
+					
+					<p>Use a custom Conda channel to control and version packages.  Use "versionless" package specifications in requirements.txt to prevent getting outdated versions of libraries.</p>
+					
+					<p>Note that with data loss protection enabled, you will <strong>not</strong> be able to access external websites, including Conda channels.</p>
+				</section>
+				
+				<section data-background-image="presentation/assets/background/no-parking.jpg" data-background-opacity="0.2">
+					<h3>Working with SAS Tokens</h3>
+					
+					<p>Spark pools allow us to query Key Vault for access to resources like SAS tokens, connection strings, etc.</p>
+					
+					<p>DO NOT STORE SECRETS OUTSIDE OF KEY VAULT!</p>
+					
+					<p>Use the TokenLibrary to access these secrets.  To ensure it has access, the Synapse MSI should have Secret Get privileges on the Key Vault in question.</p>
+				</section>
+				
+				<section data-background-image="presentation/assets/image/Bubbles.jpg" data-background-opacity="0.4">
+					<h3>Agenda</h3>
+					
+					<ol>
+						<li>What is Azure Synapse Analytics?</li>
+						<li>Before You Begin...</li>
+						<li>Setup Options</li>
+						<li>Workspace Security</li>
+						<li>Linked Services</li>
+						<li>Pool Security</li>
+						<li class="active">Additional Tools</li>
+					</ol>
+				</section>
+				
+				<section data-background-image="presentation/assets/background/bison-fighting.jpg" data-background-opacity="0.2">
+					<h3>Microsoft Defender for SQL</h3>
+
+					<p>Microsoft Defender for SQL includes two key components:</p>
+					
+					<ul>
+						<li>SQL Advanced Threat Protection - Provides alerting on suspicious events like log on from an unusual location, a suspected brute force attack, or an unusual location for data exports</li>
+						<li>SQL Vulnerability Assessment - Automated scanning service built into Azure which sends a weekly e-mail containing potential configuration issues</li>
+					</ul>
+				</section>
+				
+				<section data-background-image="presentation/assets/background/goals.jpg" data-background-opacity="0.2">
+					<h3>Azure Policy</h3>
+
+					<p>Azure Policy helps enforce organizational standards and ensure compliance by defining business rules in JSON and applying them to Azure resources.</p>
+					
+					<p>Policies can help you audit configuration drift, log resource changes, alter resources before a change, or even deny resource changes if particular circumstances are not met.</p>
+				</section>
+				
+				<section data-background-image="presentation/assets/image/Bubbles.jpg" data-background-opacity="0.4">
+					<h3>Azure Policy</h3>
+
+					<p>There are several <a href="https://docs.microsoft.com/en-us/azure/synapse-analytics/policy-reference">built-in policy definitions for Azure Synapse Analytics</a>.</p>
+					
+					<img src="presentation/assets/image/Policies.png"  />
+				</section>
+
+				<section data-background-image="presentation/assets/background/wrappingup.jpg" data-background-opacity="0.2">
+					<h3>Wrapping Up</h3>
+
+					<p>Over the course of this talk, we have looked at ways to secure an Azure Synapse Analytics workspace.  For a full, nearly 8-hour training, check out the EC-Council CodeRed course <a href="https://codered.eccouncil.org/course/securing-data-warehouse-in-azure-synapse-analytics">Securing a Data Warehouse in Azure Synapse Analytics</a>.</p>
+					
+					<img src="presentation/assets/image/ECCouncil.png" height="350" />
+				</section>
+				
+				<section data-background-image="presentation/assets/image/Bubbles.jpg" data-background-opacity="0.4">
+					<h3>Wrapping Up</h3>
+					
+					<p>
+						To learn more, go here:
+						<br />
+						<a href="https://csmore.info/on/lockdown">https://csmore.info/on/lockdown</a>
+					</p>
+					<br />
+					<p>
+						And for help, contact me:
+						<br />
+						<a href="mailto:feasel@catallaxyservices.com">feasel@catallaxyservices.com</a> | <a href="https://www.twitter.com/feaselkl">@feaselkl</a>
+					</p>
+					<br />
+					<p>
+						Catallaxy Services consulting:
+						<br />
+						<a href="https://csmore.info/contact">https://CSmore.info/on/contact</a>
+					</p>
+				</section>
+			</div>
+		</div>
+
+		<script src="../reveal.js/dist/reveal.js"></script>
+		<script src="../reveal.js/plugin/zoom/zoom.js"></script>
+		<script src="../reveal.js/plugin/notes/notes.js"></script>
+		<script src="../reveal.js/plugin/search/search.js"></script>
+		<script src="../reveal.js/plugin/markdown/markdown.js"></script>
+		<script src="../reveal.js/plugin/math/math.js"></script>
+		<script src="../reveal.js/plugin/menu/menu.js"></script>
+		<script src="../reveal.js/plugin/highlight/highlight.js"></script>
+		<script src="../reveal.js/plugin/chart/Chart.min.js"></script>
+		<script src="../reveal.js/plugin/chart/plugin.js"></script>
+		<script>
+			// More info about initialization & config:
+			// - https://revealjs.com/initialization/
+			// - https://revealjs.com/config/
+			Reveal.initialize({
+				width: '70%',
+				controls: true,
+				progress: true,
+				center: true,
+				hash: true,
+				transition: 'fade',
+				
+
+				// Learn about plugins: https://revealjs.com/plugins/
+				plugins: [ RevealZoom, RevealNotes, RevealSearch, RevealMarkdown, RevealHighlight, RevealMath, RevealMenu, RevealChart ]
+			});
+		</script>
+	</body>
+</html>
